@@ -1,0 +1,37 @@
+<html>
+<body>
+<p>
+A "Nested Sets" tree implementation for hierarchical structures in a database table.
+</p>
+See
+<ul>
+<li>http://threebit.net/tutorials/nestedset/tutorial1.html</li>
+<li>http://www.klempert.de/nested_sets/</li>
+</ul>
+<p>
+The <code>NestedSetsTreePojo</code> and <code>TemporalNestedSetsTreePojo</code> classes
+in this package provide methods to access database tables as trees.
+The <code>NestedSetsTree</code> and <code>TemporalNestedSetsTree</code> interfaces
+describes the responsibilities of a domain object against the DAO.
+</p><p>
+There can be more than one tree in one database table. You can not move a tree
+from one database table to another, but you can move trees (or sub-trees) within one table.
+The <code>DbSession</code> interfaces is to abstract the persistence layer from the DAO.
+</p><p>
+As it is not easy to define unique constraints for trees in database tables, there is an
+interface <code>UniqueTreeConstraints</code> that describes the responsibilities of such a check.
+You can pass an implementation of that interface to the DAO for checking uniqueness.
+Example is <code>UniqueTreeConstraintsImpl</code>.
+Unit tests, sample POJOs and a Hibernate <code>DbSessionImpl</code> are in parallel
+test-package (TODO should be in Maven src/test/java directory).
+</p><p>
+See <a href="JNestedSetsTree.html">JNestedSetsTree.html</a> manual in this package for further details.
+</p><p>
+Glossary
+<pre>
+DAO = data access object
+POJO = plain old Java object, domain object
+</pre>
+</p>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<persistence
+		xmlns="http://java.sun.com/xml/ns/persistence"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
+		version="2.0">
+
+	<persistence-unit name="hibernate-persistence-unit">
+	
+		<provider>org.hibernate.ejb.HibernatePersistence</provider>
+		
+		<!-- class>fri.util.database.jpa.Event</class-->
+		<!-- exclude-unlisted-classes>false</exclude-unlisted-classes-->	<!-- Does not work with Hibernate, see hibernate.archive.autodetection -->
+		
+		<properties>
+			<property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>
+			<property name="javax.persistence.jdbc.user" value="sa"/>
+			<property name="javax.persistence.jdbc.password" value=""/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1;MVCC=TRUE"/>
+			
+			<property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+			
+			<!-- Drop existing tables on every startup -->
+			<property name="hibernate.hbm2ddl.auto" value="create"/>
+			
+			<!-- Echo all executed SQL -->
+			<!-- property name="hibernate.show_sql" value="false"/-->
+			
+			<!-- Make Hibernate scan for annotated classes, as exclude-unlisted-classes does not work with Hibernate 4.2.1 -->
+			<property name="hibernate.archive.autodetection" value="class" />
+			
+		</properties>
+		
+	</persistence-unit>
+	
+	<persistence-unit name="eclipselink-persistence-unit" transaction-type="RESOURCE_LOCAL">
+	
+		<provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+		
+		<!-- class>fri.util.database.jpa.Event</class-->
+		<exclude-unlisted-classes>false</exclude-unlisted-classes>
+		
+		<properties>
+			<property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>
+			<property name="javax.persistence.jdbc.user" value="sa"/>
+			<property name="javax.persistence.jdbc.password" value=""/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1;MVCC=TRUE"/>
+	
+			<property name="eclipselink.target-database" value="Auto"/>
+			<!-- see http://eclipse.org/eclipselink/documentation/2.4/jpa/extensions/p_target_database.htm#target-database -->
+	
+			<!-- Drop existing tables on every startup -->
+			<property name="eclipselink.ddl-generation" value="drop-and-create-tables" />
+			
+			<!-- Echo all executed SQL -->
+			<!-- property name="eclipselink.logging.level" value="FINE" /-->
+			
+		</properties>
+		
+	</persistence-unit>
+
+</persistence>

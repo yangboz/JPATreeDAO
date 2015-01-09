@@ -1,0 +1,2077 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <meta content="text/html; charset=windows-1252"
+      http-equiv="Content-Type">
+    <title>JpaTreeDao - Hierarchies in Database Tables</title>
+  </head>
+  <body>
+    <br>
+    <h1 style="text-align: center;">JpaTreeDao - Hierarchies in Database Tables</h1>
+    <span style="font-style: italic;">JpaTreeDao</span> is a Java
+    framework to manage hierarchies stored in database tables, using <a
+      href="http://en.wikipedia.org/wiki/Object-relational_mapping">ORM</a>
+    persistence. You can choose between "<a
+      href="http://en.wikipedia.org/wiki/Nested_set_model">Nested Sets</a>"
+    and "<a
+href="http://karwin.blogspot.co.at/2010/03/rendering-trees-with-closure-tables.html">Closure
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Table</a>" trees. The <a
+      href="http://en.wikipedia.org/wiki/Data_Access_Object">DAO</a>
+    interface provides methods like <span style="font-style: italic;">createRoot,
+      addChild, </span><span style="font-style: italic;"><span
+        style="font-style: italic;">getChildren</span>, remove</span><span
+      style="font-style: italic;"><span style="font-style: italic;">, </span>move,
+      copy</span>. Several different trees per table are possible.
+    Tree-specific unique constraints are available (e.g. uniqueness per
+    tree level), as well as temporal extensions. Unit-tested with
+    Hibernate and EclipseLink, coverage is 90%.<br>
+    <br>
+    <i>JpaTreeDao</i> is open source, published under&nbsp; <a
+      href="http://www.linfo.org/bsdlicense.html">BSD License</a>.<br>
+    <br>
+    <div style="text-align: center;"><i>Author: <a
+          href="mailto:fritz.ritzberger@gmail.com">Ritzberger Fritz</a>,
+        September 2013</i><br>
+      <div style="text-align: left;">
+        <hr style="width: 100%; height: 2px;">
+        <h2>Contents</h2>
+        <h2> </h2>
+        <ul>
+          <li><a href="#Introduction">Introduction</a></li>
+          <ul>
+            <li><a href="#Intro_Nested_Sets">Nested Sets</a></li>
+            <li><a href="#Intro_Closure_Table">Closure Table</a><br>
+            </li>
+          </ul>
+          <li><a href="#Terms">Terms</a><br>
+          </li>
+          <li><a href="#Quick_Start_Example">Programming with JpaTreeDao</a></li>
+          <ul>
+            <li><a href="#Programming_Common_Behaviour">Common Behavior</a><br>
+            </li>
+          </ul>
+          <ul>
+            <li><a href="#Nested_Sets">Nested Sets</a><br>
+            </li>
+            <ul>
+              <li><a href="#Provide_the_entity">Provide the entity</a></li>
+              <li><a href="#Provide_the_database_layer">Provide the
+                  database layer</a></li>
+              <li><a href="#Allocate_the_DAO">Allocate the DAO</a></li>
+              <li><a href="#Remarks">Remarks</a></li>
+            </ul>
+            <li><a href="#Closure_Table">Closure Table</a></li>
+            <ul>
+              <li><a href="#Provide_the_entities">Provide the entities</a></li>
+              <li><a href="#Provide_the_database_layer_CT">Provide the
+                  database layer</a></li>
+              <li><a href="#Allocate_the_DAO_CT">Allocate the DAO</a></li>
+              <li><a href="#Remarks_CT">Remarks</a><br>
+              </li>
+            </ul>
+          </ul>
+          <li><a href="#Temporal_extensions">Temporal Extensions</a></li>
+          <ul>
+            <li><a href="#Common_behavior">Common behaviour</a></li>
+            <li><a href="#Nested_Sets_Temporal">Nested Sets</a></li>
+            <li><a href="#Closure_Table_Temporal">Closure Table</a><br>
+            </li>
+          </ul>
+          <li><a href="#DAO_classes">DAO API</a></li>
+          <li><a href="#Synchronization">Concurrency</a><br>
+          </li>
+          <ul>
+          </ul>
+          <li><a href="#Unique_constraints">Unique Constraints</a></li>
+          <li><a href="#The_Update_Problem">The Update Problem</a></li>
+          <li><a href="#Caching_Children">Caching Trees</a></li>
+          <li><a href="#Another_Temporal_Remove">Another Recoverable
+              Remove Method<br>
+            </a></li>
+          <li><a href="#Copying_Nodes">Copying Nodes</a></li>
+          <ul>
+            <li><a href="#CopiedNodeTemplate_parameter">CopiedNodeTemplate
+
+
+
+
+
+
+
+
+
+
+                parameter</a></li>
+            <li><a href="#CopiedNodeRenamer_interface">CopiedNodeRenamer
+                interface</a></li>
+          </ul>
+          <li><a href="#List_of_examples">List of examples</a><br>
+          </li>
+        </ul>
+        <hr style="width: 100%; height: 2px;">
+        <h2><a name="Introduction"></a>Introduction</h2>
+        <i>JpaTreeDao</i> enables you to add hierarchical structure to
+        database tables managed by a Java ORM layer (Object-Relational
+        Mapping) like Hibernate or EclipseLink.<br>
+        <blockquote>This document tries to make the use of <i>JpaTreeDao</i>
+          library quick and easy. It is not an introduction to <a
+            href="http://en.wikipedia.org/wiki/Nested_set_model">Nested
+            Sets</a> and <a
+            href="http://technobytz.com/closure_table_store_hierarchical_data.html">Closure
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            Table</a> concepts. Please read about this on the internet.
+          I learnt a lot from (and want to thank) <b>Bill Karwin</b>,
+          who published articles and slides about trees in database
+          tables.<br>
+        </blockquote>
+        What do you need to know about these methods when using <i>JpaTreeDao</i>
+        ?<br>
+        <br>
+        <h3><a name="Intro_Nested_Sets"></a>Nested Sets</h3>
+        Uses indexes stored within the managed entity to model the
+        hierarchy. That means you need to<br>
+        <ul>
+          <li>add two integer fields to your entity that should become a
+            tree: <i>"lft"</i> and <i>"rgt"<br>
+            </i> <small>(can not use "left" and "right" as these are
+              SQL key words).</small><br>
+          </li>
+        </ul>
+        To enable several roots within the same table, you also need to<i>
+        </i>
+        <ul>
+          <li>add a <i>"topLevel"</i> field, which is a reference
+            (foreign key) to the root of the tree the entity belongs to.</li>
+        </ul>
+        Because tree info is stored directly within the entity, such an
+        entity can belong to only <b>one tree</b>.<br>
+        Although there can be several roots within a "nested sets"
+        database table, these trees can not share nodes.<br>
+        Because the structural management is done by <i>lft</i> and <i>rgt</i>
+        indexes, children lists always have a defined order. You can not
+        get rid of that order.<br>
+        <h4>Advantages:</h4>
+        <ol>
+          <li>can read a whole tree (or sub-tree) using only one query
+            (-&gt; not just children lists)<br>
+          </li>
+          <li>most operations (add, remove, copy, move) are fast<br>
+          </li>
+        </ol>
+        <h4>Disadvantages:</h4>
+        <ol>
+          <li>an entity can belong to only one tree<br>
+          </li>
+          <li>there are no parent references and no children lists in
+            entities, all of that must be done through DAO calls</li>
+          <li>children listings require reading the whole sub-tree below
+            parent node and thus might be slow<br>
+          </li>
+        </ol>
+        <br>
+        <h3><a name="Intro_Closure_Table"></a>Closure Table</h3>
+        <p>Uses an additional paths-table where tree structures
+          (references, level, order) are stored. No additional fields
+          are needed in your entity.<br>
+          Through that, a tree node entity can belong to <b>more than
+            one tree</b>, lets call it <b>tree-aspect</b>. For each
+          tree-aspect you will need one additional paths-table.<br>
+          Nevertheless several roots (that can not share nodes) can
+          exist in just one paths-table.<br>
+        </p>
+        <h4>Advantages:</h4>
+        <ul>
+          <li>several tree-aspects of one node table are possible</li>
+          <li>several roots in one tree-aspect are possible</li>
+          <li>the node table needs no additional attributes to become a
+            tree<br>
+          </li>
+        </ul>
+        <h4>Disadvantages:</h4>
+        <ul>
+          <li>several roots within one tree-aspect can not share nodes<br>
+          </li>
+          <li>operations are slower than Nested Sets tree operations
+            (due to lots of path references to manage)</li>
+        </ul>
+        <br>
+        <h3>Remark</h3>
+        <p><b>Adjacency List</b> is the traditional way to hold trees in
+          database tables. This method uses a simple parent reference in
+          every entity. With a JPA back-reference, a children list would
+          be available directly in such an entity. Such trees are nice
+          for subsequent tree branch expansion, but complicated when you
+          need to read the whole tree at once (e.g. for a report). <i>JpaTreeDao</i>
+          doesn't provide an Adjacency List implementation.<br>
+          <br>
+          <br>
+        </p>
+        <hr size="2" width="100%">
+        <h2> <a name="Terms"></a>Terms</h2>
+        <b><span style="font-style: italic;"></span></b>
+        <table width="100%" border="1" cellpadding="2" cellspacing="2">
+          <tbody>
+            <tr>
+              <td valign="top"><b><span style="font-style: italic;">E</span></b><b><span
+                    style="font-style: italic;">ntity</span></b>,<b><i>
+                    Node, Tree Node<br>
+                  </i></b></td>
+              <td valign="top">The Java object representation of a
+                database record in memory.</td>
+            </tr>
+            <tr>
+              <td valign="top"><i><b>Children</b></i></td>
+              <td valign="top">The direct children of a parent, not the
+                whole tree below it.<br>
+              </td>
+            </tr>
+            <tr>
+              <td valign="top"><b><span style="font-style: italic;">Temporal</span></b></td>
+              <td valign="top">Is used to indicate that no physical
+                database deletion takes place when a node is removed.
+                Records are deleted by historicizing them, i.e. setting
+                a <span style="font-style: italic;">validTo</span>
+                timestamp property. There are DAO methods that provide
+                access to historicized nodes and allow recovery. You can
+                even override DAO methods to implement another
+                deletion-mechanism than <i>validFrom</i> and <i>validTo</i>
+                fields (see "<a
+href="file:///media/windows/fri/eclipse-workspace/jpa-tree/src/main/resources/fri/util/database/jpa/tree/JpaTree.html#Another_Temporal_Remove">Another
+
+
+
+
+
+
+
+
+                  Recoverable Remove Method</a>").</td>
+            </tr>
+          </tbody>
+        </table>
+        <br>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="Quick_Start_Example"></a>Programming with
+          JpaTreeDao<br>
+        </h2>
+        &nbsp; <i></i>You have to provide classes to get productive
+        with <i>JpaTreeDao</i>:<br>
+        <ul>
+          <li>provide the <b>entity class</b> to manage as tree by
+            implementing one of the <i>NestedSetsTreeNode</i> or <i>ClosureTableTreeNode</i>
+            interfaces</li>
+          <ul>
+            <li>for <i>ClosureTable</i>, provide also a <b>path-entity</b>
+              by implementing the <i>TreePath</i> interface</li>
+          </ul>
+          <li>provide the <b>database layer</b> by implementing the <i>DbSession</i>
+            interface<br>
+          </li>
+        </ul>
+        The programming model is a DAO, meaning you have no
+        children-list and no parent-reference in your entity, you need
+        to call the DAO to get these. You need the DAO for any operation
+        on the tree. For a quick insight look at the <a
+          href="#List_of_examples"><i>examples</i></a> in <i>test</i>
+        directory.<br>
+        <br>
+        <blockquote><b>Note:</b> Although this library is based on JPA <i>EntityManager</i>,
+          you can use it with Hibernate <i>Session</i>, too (older
+          Hibernate versions). Look for the<br>
+          <ul>
+            <li><i>DbSessionHibernateImpl</i></li>
+          </ul>
+          Java class in <i>test</i> directory. It is an alternative
+          implementation of the <i>DbSession</i> interface. It contains
+          a workaround for the differences between HQL and JPQL. There
+          are also unit-tests that prove that everything works with HQL.<br>
+        </blockquote>
+        <br>
+        <hr size="2" width="100%">
+        <ul>
+        </ul>
+        <h3><a name="Programming_Common_Behaviour"></a>Common Behaviour</h3>
+        As said, the DAO abstracts<br>
+        <ul>
+          <li>the managed entities (database tables), and</li>
+          <li>the database layer needed to perform persistence actions</li>
+        </ul>
+        Here are the constructors of <i>NestedSetsTreeDao</i> (manages
+        one database table) and <i>ClosureTableTreeDao</i> (manages two
+        database tables, one for nodes and one for paths). <br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">	<span style="color:#200080; font-weight:bold; ">public</span> NestedSetsTreeDao(
+			Class&lt;? <span style="color:#200080; font-weight:bold; ">extends</span> NestedSetsTreeNode&gt; entityClass,
+			DbSession session)
+	
+	<span style="color:#200080; font-weight:bold; ">public</span> NestedSetsTreeDao(
+			Class&lt;? <span style="color:#200080; font-weight:bold; ">extends</span> NestedSetsTreeNode&gt; entityClass,
+			String entityName,
+			DbSession session)<br><br><br>	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeDao(
+			Class&lt;? <span style="color:#200080; font-weight:bold; ">extends</span> ClosureTableTreeNode&gt; treeNodeEntityClass,
+			Class&lt;? <span style="color:#200080; font-weight:bold; ">extends</span> TreePath&gt; treePathsEntityClass,
+			boolean orderIndexMatters,
+			DbSession session)
+	
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeDao(
+			Class&lt;? <span style="color:#200080; font-weight:bold; ">extends</span> ClosureTableTreeNode&gt; treeNodeEntityClass,
+			String treeNodeEntity,
+			Class&lt;? <span style="color:#200080; font-weight:bold; ">extends</span> TreePath&gt; treePathEntityClass,
+			String treePathEntity,
+			boolean orderIndexMatters,
+			DbSession session)<br clear="all"></pre>
+        </blockquote>
+        You need to pass the entity class and the database layer (as
+        instance) to the DAO at construction time. Additionally you can
+        pass in the name of the according JPQL entity
+        (differing from the <i>simple class-names</i> of the Java
+        entity). This is for the case that your entities are just
+        interfaces and have a backing implementation with another name.<i>
+          JpaTreeDao</i> uses<i> entityClass.getSimpleName()</i> as
+        default <i>entityName</i>. While with <i>NestedSetsTreeDao&nbsp;</i>you
+        can not get rid of children order, you can tell the <i>ClosureTableTreeDao</i>
+        if order matters or not.<br>
+        <br>
+        <ul>
+        </ul>
+        <hr size="2" width="100%">
+        <ul>
+        </ul>
+        <h3> <a name="Nested_Sets"></a>Nested Sets</h3>
+        <h4><a name="Provide_the_entity"></a>Provide the entity<br>
+        </h4>
+        Your entity needs additional fields <i>lft</i>, <i>rgt</i> and
+        <i>topLevel</i>&nbsp; like in the following example (see also <i>class
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          PersonNst</i> in <i>test</i>-package).<br>
+        For copy-actions <i>clone()</i> is required, which should leave
+        the clone's primary key <i>null</i>.<br>
+        In other words: the interface <i>NestedSetsTreeNode</i> must be
+        implemented by your entity to fit to the DAO.<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">@Entity
+<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> Person <span style="color:#200080; font-weight:bold; ">implements</span> <b>NestedSetsTreeNode</b>
+<span style="color:#406080; ">{</span>
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>GeneratedValue
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> id<span style="color:#406080; ">;</span>	<span style="color:#595979; ">// primary key</span>
+<span style="color:#308080; "></span><span style="color:#308080; "></span><span style="color:#308080; "></span><span style="color:#200080; font-weight:bold; "></span><span style="color:#308080; "></span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#406080; ">;</span><span style="color:#406080; "></span>	<span style="color:#595979; ">// some person property</span>
+	
+	<b><span style="color:#308080; ">@</span></b><b>ManyToOne</b><b><span style="color:#308080; ">(</span></b><b>targetEntity </b><b><span style="color:#308080; ">=</span></b><b> Person</b><b><span style="color:#308080; ">.</span></b><b>class</b><b><span style="color:#308080; ">)</span></b><b>
+	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> NestedSetsTreeNode topLevel</b><b><span style="color:#406080; ">;</span></b>	<span style="color:#595979; ">// root reference</span><b>
+    
+	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> </b><b><span style="color:#7779bb; ">int</span></b><b> lft</b><b><span style="color:#406080; ">;</span></b>	<span style="color:#595979; ">// NestedSets index - "left" would be a SQL keyword!</span><b>
+	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> </b><b><span style="color:#7779bb; ">int</span></b><b> rgt</b><b><span style="color:#406080; ">;</span></b>	<span style="color:#595979; ">// </span><span style="color:#595979; "><span style="color:#595979; ">NestedSets index - </span>"right" would be a SQL keyword!</span>
+	
+	<span style="color:#200080; font-weight:bold; ">public</span> Person<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> Person<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>name <span style="color:#308080; ">=</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getId<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> id<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setName<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>name <span style="color:#308080; ">=</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> NestedSetsTreeNode getTopLevel</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> topLevel</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setTopLevel</b><b><span style="color:#308080; ">(</span></b><b>NestedSetsTreeNode topLevel</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>topLevel </b><b><span style="color:#308080; ">=</span></b><b> topLevel</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+	
+	<b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">int</span></b><b> getLeft</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> lft</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setLeft</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#7779bb; ">int</span></b><b> left</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>lft </b><b><span style="color:#308080; ">=</span></b><b> left</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+
+	<b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">int</span></b><b> getRight</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> rgt</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setRight</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#7779bb; ">int</span></b><b> right</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>rgt </b><b><span style="color:#308080; ">=</span></b><b> right</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+
+	<b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> Person clone</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b>	</b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> </b><b><span style="color: rgb(32, 0, 128);">new</span></b><b> Person</b><b><span style="color:#308080; ">(</span></b><b>getName</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b><span style="color:#308080; ">)</span></b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        Mind that you should not access your entity table through
+        another mechanism than the DAO. Only the DAO provides the
+        necessary knowledge for an entity to be identified as a tree
+        member. For example, an empty root node has <i>lft=1</i>, <i>rgt=2</i>
+        and <i>topLevel = this</i>.<br>
+        <br>
+        <h4><a name="Provide_the_database_layer"></a>Provide the
+          database layer (ORM)<br>
+        </h4>
+        Next you need to provide a <i>DbSession</i> implementation to
+        the DAO. This interface abstracts the database layer from the
+        DAO. For JPA-compatible database layers (ORM) like <b>EclipseLink</b>
+        or <b>Hibernate-EntityManager</b> you need just one
+        implementation, configuring the layer by a <i>persistence-unit</i>
+        name from <i>persistence.xml</i>.<br>
+        <br>
+        You can simply copy the implementation that is in the <i> test</i>-package,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        called<br>
+        <ul>
+          <li><i>DbSessionJpaImpl.java</i>:</li>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;"><span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> DbSessionJpaImpl <span style="color:#200080; font-weight:bold; ">implements</span> DbSession
+<span style="color:#406080; ">{</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#200080; font-weight:bold; ">final</span> EntityManager entityManager<span style="color:#406080; ">;</span>
+	
+	<span style="color:#200080; font-weight:bold; ">public</span> DbSessionJpaImpl<span style="color:#308080; ">(</span>EntityManager entityManager<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>entityManager <span style="color:#308080; ">=</span> entityManager<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">Object</span> get<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Class</span><span style="color:#308080; ">&lt;</span><span style="color:#308080; ">?</span><span style="color:#308080; ">&gt;</span> entityClass<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">Serializable</span> id<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> entityManager<span style="color:#308080; ">.</span>find<span style="color:#308080; ">(</span>entityClass<span style="color:#308080; ">,</span> id<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">Object</span> save<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Object</span> node<span style="color:#308080; ">)</span>	<span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> entityManager<span style="color:#308080; ">.</span>merge<span style="color:#308080; ">(</span>node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> flush<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		entityManager<span style="color:#308080; ">.</span>flush<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> refresh<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Object</span> node<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		entityManager<span style="color:#308080; ">.</span>refresh<span style="color:#308080; ">(</span>node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> delete<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Object</span> node<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		entityManager<span style="color:#308080; ">.</span>remove<span style="color:#308080; ">(</span>node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span><span style="color:#308080; ">?</span><span style="color:#308080; ">&gt;</span> queryList<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> queryText<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">[</span><span style="color:#308080; ">]</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> query<span style="color:#308080; ">(</span>queryText<span style="color:#308080; ">,</span> parameters<span style="color:#308080; ">)</span><span style="color:#406080; "></span><span style="color:#308080; ">.</span>getResultList<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> queryCount<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> queryText<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">[</span><span style="color:#308080; ">]</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#6679aa; font-weight:bold; ">List</span> result <span style="color:#308080; ">=</span> queryList<span style="color:#308080; ">(</span>queryText<span style="color:#308080; ">,</span> parameters<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> <span style="color:#308080; ">(</span><span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Number</span><span style="color:#308080; ">)</span> result<span style="color:#308080; ">.</span>get<span style="color:#308080; ">(</span><span style="color:#008c00; ">0</span><span style="color:#308080; ">)</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>intValue<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> executeUpdate<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> sqlCommand<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">[</span><span style="color:#308080; ">]</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		Query query <span style="color:#308080; ">=</span> query<span style="color:#308080; ">(</span>sqlCommand<span style="color:#308080; ">,</span> parameters<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+		query<span style="color:#308080; ">.</span>executeUpdate<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	
+	<span style="color:#200080; font-weight:bold; ">private</span> Query query<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> queryText<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">[</span><span style="color:#308080; ">]</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		Query query <span style="color:#308080; ">=</span> entityManager<span style="color:#308080; ">.</span>createQuery<span style="color:#308080; ">(</span>queryText<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">if</span> <span style="color:#308080; ">(</span>parameters <span style="color:#308080; ">!</span><span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">null</span><span style="color:#308080; ">)</span>	<span style="color:#406080; ">{</span>
+			<span style="color:#7779bb; ">int</span> i <span style="color:#308080; ">=</span> <span style="color:#008c00; ">1</span><span style="color:#406080; ">;</span>
+			<span style="color:#200080; font-weight:bold; ">for</span> <span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Object</span> parameter <span style="color:#308080; ">:</span> parameters<span style="color:#308080; ">)</span>	<span style="color:#406080; ">{</span>
+				<span style="color:#200080; font-weight:bold; ">if</span> <span style="color:#308080; ">(</span>parameter <span style="color:#308080; ">=</span><span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">null</span><span style="color:#308080; ">)</span>
+					<span style="color:#200080; font-weight:bold; ">throw</span> <span style="color:#200080; font-weight:bold; ">new</span> <span style="color:#6679aa; font-weight:bold; ">IllegalArgumentException</span><span style="color:#308080; ">(</span><span style="color:#1060b6; ">"Binding parameter at position "</span><span style="color:#308080; ">+</span>i<span style="color:#308080; ">+</span><span style="color:#1060b6; ">" can not be null: "</span><span style="color:#308080; ">+</span>queryText<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+				query<span style="color:#308080; ">.</span>setParameter<span style="color:#308080; ">(</span>i<span style="color:#308080; ">,</span> parameter<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+				i<span style="color:#308080; ">+</span><span style="color:#308080; ">+</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+		<span style="color:#406080; ">}</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> query<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        For <b>Hibernate-Session</b> variant (not JPA-compatible) you
+        can copy following implementation, again in <i>test</i>-package:<br>
+        <ul>
+          <li><i>DbSessionHibernateImpl.java</i></li>
+        </ul>
+        <br>
+        Of course you will need the JPA <i>EntityManager</i> as
+        constructor parameter, here is sample code to get one:<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> String PERSISTENCE_UNIT_NAME = "<span style="color:#1060b6; "></span><span style="color:#1060b6; ">your-persistence-unit-name</span>"<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME)<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> EntityManager entityManager = entityManagerFactory.createEntityManager()<span style="color:#308080; ">;</span>
+</pre>
+        </blockquote>
+        This works with a JPA <i>persistence.xml</i> in META-INF
+        directory (see <i>test/resources</i> package). Following
+        example uses <b>Hiberate-EntityManager</b> (see Maven POM for
+        Version) and <b>H2</b> as in-memory database. To avoid
+        auto-scanning for classes annotated with @Entity you need to
+        remove <span style="color:#1060b6; ">hibernate.archive.autodetection</span>
+        and use<i> </i><i>&lt;class&gt;your.package.YourEntity&lt;/class&gt;</i>
+        elements instead (refer to <i>persistence.xml</i> schema).<span
+          style="color:#1060b6; "></span>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;"><span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">persistence</span>
+		<span style="color:#0066ee; ">xmlns</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#0066ee; ">http</span><span style="color:#406080; ">:</span><span style="color:#200080; font-weight:bold; ">//</span><span style="color:#5555dd; ">java.sun.com</span><span style="color:#40015a; ">/xml/ns/persistence</span><span style="color:#1060b6; ">"</span>
+		<span style="color:#0066ee; ">xmlns</span><span style="color:#406080; ">:</span><span style="color:#074726; ">xsi</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#0066ee; ">http</span><span style="color:#406080; ">:</span><span style="color:#200080; font-weight:bold; ">//</span><span style="color:#5555dd; ">www.w3.org</span><span style="color:#40015a; ">/2001/XMLSchema-instance</span><span style="color:#1060b6; ">"</span>
+		<span style="color:#0066ee; ">xsi</span><span style="color:#406080; ">:</span><span style="color:#074726; ">schemaLocation</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#0066ee; ">http</span><span style="color:#406080; ">:</span><span style="color:#200080; font-weight:bold; ">//</span><span style="color:#5555dd; ">java.sun.com</span><span style="color:#40015a; ">/xml/ns/persistence</span><span style="color:#1060b6; "> </span><span style="color:#0066ee; ">http</span><span style="color:#406080; ">:</span><span style="color:#200080; font-weight:bold; ">//</span><span style="color:#5555dd; ">java.sun.com</span><span style="color:#40015a; ">/xml/ns/persistence/persistence_2_0.xsd</span><span style="color:#1060b6; ">"</span>
+		<span style="color:#474796; ">version</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">2.0</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">&gt;</span>
+
+	<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">persistence-unit</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">your-persistence-unit-name</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">&gt;</span>
+		<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">provider</span><span style="color:#0057a6; ">&gt;</span>org.hibernate.ejb.HibernatePersistence<span style="color:#0057a6; ">&lt;/</span><span style="color:#333385; ">provider</span><span style="color:#0057a6; ">&gt;</span>
+		
+		<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">properties</span><span style="color:#0057a6; ">&gt;</span>
+			<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">property</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">javax.persistence.jdbc.driver</span><span style="color:#1060b6; ">"</span> <span style="color:#474796; ">value</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">org.h2.Driver</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">/&gt;</span>
+			<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">property</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">javax.persistence.jdbc.user</span><span style="color:#1060b6; ">"</span> <span style="color:#474796; ">value</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">sa</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">/&gt;</span>
+			<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">property</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">javax.persistence.jdbc.password</span><span style="color:#1060b6; ">"</span> <span style="color:#474796; ">value</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">/&gt;</span>
+			<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">property</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">javax.persistence.jdbc.url</span><span style="color:#1060b6; ">"</span> <span style="color:#474796; ">value</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1;MVCC=TRUE</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">/&gt;</span>
+			
+			<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">property</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">hibernate.dialect</span><span style="color:#1060b6; ">"</span> <span style="color:#474796; ">value</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">org.hibernate.dialect.H2Dialect</span><span style="color:#1060b6; ">"</span><span style="color:#0057a6; ">/&gt;</span>
+			
+			<span style="color:#595979; ">&lt;!--</span><span style="color:#595979; "> Make Hibernate scan for annotated classes </span><span style="color:#595979; ">--&gt;</span>
+			<span style="color:#0057a6; ">&lt;</span><span style="color:#333385; ">property</span> <span style="color:#474796; ">name</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">hibernate.archive.autodetection</span><span style="color:#1060b6; ">"</span> <span style="color:#474796; ">value</span><span style="color:#308080; ">=</span><span style="color:#1060b6; ">"</span><span style="color:#1060b6; ">class</span><span style="color:#1060b6; ">"</span> <span style="color:#0057a6; ">/&gt;</span>
+		<span style="color:#0057a6; ">&lt;/</span><span style="color:#333385; ">properties</span><span style="color:#0057a6; ">&gt;</span>
+	<span style="color:#0057a6; ">&lt;/</span><span style="color:#333385; ">persistence-unit</span><span style="color:#0057a6; ">&gt;</span>
+<span style="color:#0057a6; ">&lt;/</span><span style="color:#333385; ">persistence</span><span style="color:#0057a6; ">&gt;</span> <br><br></pre>
+        </blockquote>
+        <h4> <a name="Allocate_the_DAO"></a>Allocate the DAO</h4>
+        After this all has been done, you are ready to apply the DAO.
+        Its name is <i>NestedSestTreeDao</i> (temporal extension is <i>TemporalNestedSestTreeDao</i>).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        You can find this example code in <i>test</i>-package in<br>
+        <ul>
+          <li><i>examples/nestedsets/JpaExample.java</i></li>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> EntityTransaction transaction = entityManager.getTransaction()<span style="color:#308080; ">;</span>
+		transaction.begin()<span style="color:#308080; ">;</span>
+
+		<span style="color:#200080; font-weight:bold; ">final</span> DbSession dbSession = new DbSessionJpaImpl(entityManager)<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeDao dao = new <b>NestedSetsTreeDao</b>(Person.class, dbSession)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// add a constraint that checks that a person's name is unique across the whole tree</span>
+		dao.setUniqueTreeConstraint(new UniqueWholeTreeConstraintImpl(
+						new String [][] <span style="color:#406080; ">{</span> <span style="color:#406080; ">{</span> <span style="color:#1060b6; ">"name"</span> <span style="color:#406080; ">}</span> <span style="color:#406080; ">}</span>,
+						false))<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// create a tree</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode walter = dao.createRoot(new Person("Walter"))<span style="color:#308080; ">;</span>
+		assert dao.getRoots().size() == 1<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// insert root children</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode linda = dao.addChild(walter, new Person("Linda"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode mary = dao.addChild(walter, new Person"Mary"))<span style="color:#308080; ">;</span>
+		assert dao.size(walter) == 3<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// add children to a child</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode peter = dao.addChild(mary, new Person("Peter"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode paul = dao.addChild(mary, new Person("Paul"))<span style="color:#308080; ">;</span>
+		assert dao.size(walter) == 5<span style="color:#308080; ">;</span>
+		assert dao.size(mary) == 3<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// retrieve children lists</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;NestedSetsTreeNode&gt; childrenOfWalter = dao.getChildren(walter)<span style="color:#308080; ">;</span>
+		assert childrenOfWalter.size() == 2 &amp;&amp; childrenOfWalter.get(0).equals(linda) &amp;&amp; childrenOfWalter.get(1).equals(mary)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;NestedSetsTreeNode&gt; childrenOfMary = dao.getChildren(mary)<span style="color:#308080; ">;</span>
+		assert childrenOfMary.size() == 2 &amp;&amp; childrenOfMary.get(0).equals(peter) &amp;&amp; childrenOfMary.get(1).equals(paul)<span style="color:#308080; ">;</span>
+
+		transaction.commit()<span style="color:#308080; ">;</span>
+</pre>
+        </blockquote>
+        How to do this with <b>Hibernate-Session</b> you can see in <i>test</i>-package
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        in classes named<br>
+        <ul>
+          <li><i>HibernateSessionExample.java</i></li>
+        </ul>
+        For this you will need a <i>hibernate.cfg.xml</i> file in your
+        CLASSPATH root, you can find an example in <i>test/resources</i>
+        package.<br>
+        <br>
+        <h4><a name="Remarks"></a>Remarks</h4>
+        <span style="font-weight: bold;">Do not use getLeft() and
+          getRight()</span> indexes and <span style="font-weight:
+          bold;">getTopLevel()</span> in any way, and do not change
+        them. Changes might break the tree. Left/right values may have
+        gaps when <span style="font-style: italic;">TemporalNestedSetsTreeDao</span>
+        is used, so their values might not be what you expect.<br>
+        <br>
+        <span style="font-weight: bold;">Do not use a deleted entity
+          anymore after deletion</span>, e.g. inserting it again, not
+        even after its managing JPA session was closed. If you need its
+        values, clone it and insert the clone. This also applies to all
+        children that were below a deleted parent!<br>
+        <br>
+        <br>
+        <span style="font-weight: bold;"></span><br>
+        <hr size="2" width="100%">
+        <h3><a name="Closure_Table"></a>Closure Table</h3>
+        <h4><a name="Provide_the_entities"></a>Provide the entities</h4>
+        <p>You need the node entity and another entity that describes
+          the tree structure (so there will be <b>two</b> database
+          tables). The first needs no additional tree properties, just <i>clone()</i>
+          is required for implementing interface <i>ClosureTableTreeNode</i>.
+          The second must implement interface <i>TreePath</i>.</p>
+        <p>Following is an example node entity (see also class <i>PersonCtt</i>
+          in <i>test</i>-package):<br>
+        </p>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">@Entity
+<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> Person <span style="color:#200080; font-weight:bold; ">implements</span> ClosureTableTreeNode
+<span style="color:#406080; ">{</span>
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>GeneratedValue
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> id<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Column<span style="color:#308080; ">(</span>nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#406080; ">;</span>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> Person<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> Person<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>name <span style="color:#308080; ">=</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getId<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> id<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setName<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>name <span style="color:#308080; ">=</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode clone<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> <span style="color:#200080; font-weight:bold; ">new</span> Person<span style="color:#308080; ">(</span>getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <p>You can access the node table through other mechanisms than
+          the DAO, but only nodes that were added through the DAO will
+          be in tree. Adding a node through the DAO will also make it
+          persistent (if it is not yet).</p>
+        <p>This is an example <i>TreePath</i> implementation (see also
+          class <i>PersonOrganizationalTreePath</i> in <i>test</i>-package):<br>
+        </p>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">@Entity
+@IdClass(CompositePersonTreePathId.class)
+<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> PersonTreePath <span style="color:#200080; font-weight:bold; ">implements</span> TreePath
+<span style="color:#406080; ">{</span>
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#308080; ">@</span>JoinColumn<span style="color:#308080; ">(</span>name <span style="color:#308080; ">=</span> <span style="color:#1060b6; ">"ancestor"</span><span style="color:#308080; ">,</span> nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> ClosureTableTreeNode ancestor<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#308080; ">@</span>JoinColumn<span style="color:#308080; ">(</span>name <span style="color:#308080; ">=</span> <span style="color:#1060b6; ">"descendant"</span><span style="color:#308080; ">,</span> nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> ClosureTableTreeNode descendant<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Column<span style="color:#308080; ">(</span>nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> depth<span style="color:#406080; ">;</span>
+
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> orderIndex<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setAncestor<span style="color:#308080; ">(</span>ClosureTableTreeNode ancestor<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>ancestor <span style="color:#308080; ">=</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDescendant<span style="color:#308080; ">(</span>ClosureTableTreeNode descendant<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>descendant <span style="color:#308080; ">=</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getDepth<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> depth<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDepth<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> depth<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>depth <span style="color:#308080; ">=</span> depth<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getOrderIndex<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> orderIndex<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setOrderIndex<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> position<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>orderIndex <span style="color:#308080; ">=</span> position<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        The primary key of <i>PersonTreePath</i> is composed by the
+        primary keys of <i>ancestor</i> and <i>descendant</i> (JPA
+        @IdCass annotation). Here is an implementation for primary keys
+        of type <b>String</b> (see also class <i>CompositePersonTreePathId</i>
+        in <i>test</i>-package):<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;"><span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> CompositePersonTreePathId <span style="color:#200080; font-weight:bold; ">implements</span> Serializable
+<span style="color:#406080; ">{</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> ancestor<span style="color:#406080; ">;</span>	<span style="color:#595979; ">// must have same name as TreePathImpl.ancestor, and data-type like TreePathImpl.ancestor.id</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> descendant<span style="color:#406080; ">;</span>	<span style="color:#595979; ">// must have same name as TreePathImpl.descendant, and data-type like TreePathImpl.descendant.id</span>
+	
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setAncestor<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> ancestorId<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>ancestor <span style="color:#308080; ">=</span> ancestorId<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDescendant<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> descendantId<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>descendant <span style="color:#308080; ">=</span> descendantId<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">boolean</span> equals<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Object</span> o<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">if</span> <span style="color:#308080; ">(</span>o <span style="color:#308080; ">=</span><span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">)</span>
+			<span style="color:#200080; font-weight:bold; ">return</span> <span style="color:#200080; font-weight:bold; ">true</span><span style="color:#406080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">if</span> <span style="color:#308080; ">(</span>o <span style="color:#200080; font-weight:bold; ">instanceof</span> CompositePersonTreePathId <span style="color:#308080; ">=</span><span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+			<span style="color:#200080; font-weight:bold; ">return</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#406080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> CompositePersonTreePathId other <span style="color:#308080; ">=</span> <span style="color:#308080; ">(</span>CompositePersonTreePathId<span style="color:#308080; ">)</span> o<span style="color:#406080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> other<span style="color:#308080; ">.</span>getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>equals<span style="color:#308080; ">(</span>getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">)</span> <span style="color:#308080; ">&amp;</span><span style="color:#308080; ">&amp;</span> other<span style="color:#308080; ">.</span>getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>equals<span style="color:#308080; ">(</span>getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> hashCode<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>hashCode<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#308080; ">*</span> <span style="color:#008c00; ">31</span> <span style="color:#308080; ">+</span> getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>hashCode<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        <h4><a name="Provide_the_database_layer_CT"></a>Provide the
+          database layer (ORM)</h4>
+        <p>This is the same as with Nested Sets, see <a
+            href="#Provide_the_database_layer">there</a>.<br>
+        </p>
+        <h4><a name="Allocate_the_DAO_CT"></a>Allocate the DAO</h4>
+        <p>Ready to start programming with the DAO. Its name is <i>ClosureTableTreeDao</i>
+          (temporal extension is <i>TemporalClosureTableTreeDao</i>).</p>
+        <p> Following sample code shows how two tree-aspects are built
+          upon the same node table. The first is a organizational
+          hierarchy of persons, the usual chief/staff thing, while the
+          second is a functional one, lets say an expert/beginner thing.
+          Mind that you need two different <i>TreePath</i>
+          implementations (tree-aspects) for that! You can find this
+          example code (and the two <i>TreePath</i> implementations
+          used in it) in <i>test</i>-package in class<br>
+        </p>
+        <ul>
+          <li><i>examples/closuretable/JpaExample.java</i></li>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> EntityTransaction transaction = entityManager.getTransaction()<span style="color:#308080; ">;</span>
+		transaction.begin()<span style="color:#308080; ">;</span>
+
+		<span style="color:#200080; font-weight:bold; ">final</span> DbSession dbSession = new DbSessionJpaImpl(entityManager)<span style="color:#308080; ">;</span><br>		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeDao organizationalDao = new <b>ClosureTableTreeDao</b>(Person.class, PersonOrganisationalTreePath.class, true, dbSession)<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeDao functionalDao = new <b>ClosureTableTreeDao</b>(Person.class, PersonFunctionalTreePath.class, true, dbSession)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// create persons and build organizational tree</span>
+
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode walter = organizationalDao.createRoot(new Person("Walter"))<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode linda = organizationalDao.addChild(walter, new Person("Linda"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode mary = organizationalDao.addChild(walter, new Person("Mary"))<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode peter = organizationalDao.addChild(mary, new Person("Peter"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode paul = organizationalDao.addChild(mary, new Person("Paul"))<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;ClosureTableTreeNode&gt; organizationalChildrenOfWalter = organizationalDao.getChildren(walter)<span style="color:#308080; ">;</span>
+		assert organizationalChildrenOfWalter.size() == 2 &amp;&amp;
+			organizationalChildrenOfWalter.get(0).equals(linda) &amp;&amp;
+			organizationalChildrenOfWalter.get(1).equals(mary)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;ClosureTableTreeNode&gt; organizationalChildrenOfMary = organizationalDao.getChildren(mary)<span style="color:#308080; ">;</span>
+		assert organizationalChildrenOfMary.size() == 2 &amp;&amp;
+			organizationalChildrenOfMary.get(0).equals(peter) &amp;&amp;
+			organizationalChildrenOfMary.get(1).equals(paul)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// build functional tree using the same persons</span>
+		
+		functionalDao.createRoot(walter)<span style="color:#308080; ">;</span>
+		functionalDao.createRoot(linda)<span style="color:#308080; ">;</span><span style="color:#595979; ">	// "Linda" is another root</span> 
+
+		functionalDao.addChild(linda, peter)<span style="color:#308080; ">;</span>
+		functionalDao.addChild(linda, paul)<span style="color:#308080; ">;</span>
+		
+		functionalDao.addChild(walter, mary)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;ClosureTableTreeNode&gt; functionalChildrenOfWalter = functionalDao.getChildren(walter)<span style="color:#308080; ">;</span>
+		assert functionalChildrenOfWalter.size() == 1 &amp;&amp;
+			functionalChildrenOfWalter.get(0).equals(mary)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;ClosureTableTreeNode&gt; functionalChildrenOfLinda = functionalDao.getChildren(linda)<span style="color:#308080; ">;</span>
+		assert functionalChildrenOfLinda.size() == 2 &amp;&amp;
+			functionalChildrenOfLinda.get(0).equals(peter) &amp;&amp;
+			functionalChildrenOfLinda.get(1).equals(paul)<span style="color:#308080; ">;<br><br></span>		transaction.commit()<span style="color:#308080; ">;</span> <br></pre>
+        </blockquote>
+        <br>
+        <h4> <a name="Remarks_CT"></a>Remarks</h4>
+        The DAO by default does not remove anything from the node table
+        when a tree path is removed. You can change this by <i>dao.setRemoveReferencedNodes(true)</i>,
+        default is <i>false</i>. When using several tree-aspects (paths
+        tables) upon the same entity, this could be dangerous, a foreign
+        key constraint would hit when removing a node that is still
+        referenced by another tree-aspect.<br>
+        <br>
+        Maintaining child node order is optional. When you pass <i>orderIndexMatters
+
+
+
+
+
+
+
+
+
+
+          = false</i> to the DAO constructor, children lists would have
+        a random order. Maybe tree operations will be a little faster
+        then.<br>
+        <br>
+        When you put additional fields into your <i>TreePath</i>
+        entity, you can access them by calling <i>dao.getTreePathEntity(node)</i>.
+        The parameter is the entity of the node table you want to get
+        information for. The returned <i>TreePath</i> is the one that
+        represents the self-reference of the given node entity. <b>Do
+          not change </b><b><i>order</i></b><b> or </b><b><i>depth</i></b>
+        in the returned <i>TreePath</i>, this could break the tree!<br>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="Temporal_extensions"></a>Temporal extensions</h2>
+        The temporal DAO variants extend their base-DAO and override
+        several methods to manage the removal of nodes. Nodes won't be
+        removed physically but "historicized", meaning a <i>Timestamp</i>
+        field named <i>validTo</i> gets the current date when the
+        entity is removed. Afterwards it will not be visible anymore,
+        although still present in the tree.<br>
+        <br>
+        There are methods to find and recover removed nodes, and to
+        physically remove them, see <i>TemporalTreeDao</i> API. You can
+        also replace the <i>JpaTreeDao</i> historization logic by
+        overriding certain DAO methods, see below.<br>
+        <h3><a name="Common_behavior"></a>Common behavior<br>
+        </h3>
+        Your Nested Sets node entity (or Closure Table path entity) must
+        provide a <i>validTo</i> field of type <i>Date</i> (JPA
+        annotation <i>Timestamp</i>), and optionally can provide a <i>validFrom</i>
+        field (same type). If <i>validFrom</i> is in future, the entity
+        with such a value won't be visible.<br>
+        <ul>
+          <li>If your entity can provide <i>validFrom</i> and <i>validTo</i>
+            properties, pass <i>Temporal.VALID_FROM</i> and <i>Temporal.VALID_TO</i>
+            as arguments to the constructor.<br>
+            <br>
+          </li>
+          <li>If you have other names for <i>validFrom</i> and/or <i>validTo</i>
+            properties, pass these names to the DAO constructor.
+            Nevertheless you MUST implement the <i>Temporal</i>
+            interface, annotate these methods as @Transient in your
+            entity (else <i>validFrom</i> and <i>validTo</i> fields
+            would be generated in database table) and redirect them to
+            the other properties.<br>
+            <br>
+          </li>
+          <li>If you have no <i>validFrom</i> field (no support for
+            future validity), pass <i>null</i> as <i>validFromPropertyName</i>
+            argument to the DAO constructor.<br>
+            <br>
+          </li>
+          <li>If you decide to use a <i>deleted</i> flag or similar for
+            removal, see <a
+href="file:///media/windows/fri/eclipse-workspace/jpa-tree/src/main/resources/fri/util/database/jpa/tree/JpaTree.html#Another_Temporal_Remove">"Another
+
+
+
+
+
+
+
+
+
+
+
+
+              Recoverable Remove Method"</a>.</li>
+        </ul>
+        Following examples will show how to program the <i>TemporalTreeDao</i>
+        variants.<br>
+        <br>
+        <hr size="2" width="100%">
+        <h3><a name="Nested_Sets_Temporal"></a>Nested Sets</h3>
+        <p>Your node entity must implement interface <i>Temporal</i><i>NestedSestTreeNode</i>,
+          and you must pass the names of the <i>Temporal</i> properties
+          to the DAO constructor (typically <i>"validFrom"</i> and <i>"validTo"</i>).</p>
+        <p> Following example is different, it shows a <b>special case</b>,
+          not a typical application. The <i>validTo</i> property is
+          redirected to an <i>endValid</i> property, and <i>validFrom</i>
+          is dismissed. This is to demonstrate how to use the temporal
+          extension when your entity can't provide a property with name
+          "<i>validTo" </i>for some reason, and you won't support
+          future validity (<i>validFrom</i>).</p>
+        <p> Here is the example node entity. Mind how you can implement
+          <i>Temporal</i>, leaving out <i>validFrom</i> with do-nothing
+          implementations, and using @Transient annotations for all <i>Temporal</i>
+          methods.<br>
+        </p>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">@Entity
+<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> Person <span style="color:#200080; font-weight:bold; ">implements</span> <b>TemporalNestedSetsTreeNode</b>
+<span style="color:#406080; ">{</span>
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>GeneratedValue
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> id<span style="color:#406080; ">;</span><span style="color:#595979; "></span>
+
+	<span style="color:#308080; ">@</span>Column<span style="color:#308080; ">(</span>nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> NestedSetsTreeNode topLevel<span style="color:#406080; ">;</span>
+
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> lft<span style="color:#406080; ">;</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> rgt<span style="color:#406080; ">;</span><span style="color:#595979; "></span>
+
+<b><span style="color:#308080; ">	@</span></b><b>Temporal</b><b><span style="color:#308080; ">(</span></b><b>TemporalType</b><b><span style="color:#308080; ">.</span></b><b>TIMESTAMP</b><b><span style="color:#308080; ">)</span></b><b>
+	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> endValid</b><b><span style="color:#406080; ">;</span></b><b>	</b><b><span style="color:#595979; ">// the "validTo" substitute, "validFrom" is not present at all</span></b>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> Person<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> Person<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>name <span style="color:#308080; ">=</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getId<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> id<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#6679aa; font-weight:bold; ">String</span> getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setName<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> name<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>name <span style="color:#308080; ">=</span> name<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+<b>	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getEndValid</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> endValid</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setEndValid</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> endValid</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>endValid </b><b><span style="color:#308080; ">=</span></b><b> endValid</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+	
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> NestedSetsTreeNode getTopLevel<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> topLevel<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setTopLevel<span style="color:#308080; ">(</span>NestedSetsTreeNode topLevel<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>topLevel <span style="color:#308080; ">=</span> topLevel<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getLeft<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> lft<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setLeft<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> left<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>lft <span style="color:#308080; ">=</span> left<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getRight<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> rgt<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setRight<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> right<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>rgt <span style="color:#308080; ">=</span> right<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> Person clone<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> <span style="color:#200080; font-weight:bold; ">new</span> Person<span style="color:#308080; ">(</span>getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+<b>	</b><b><span style="color:#308080; ">@</span></b><b>Transient</b><b><b>	</b><b><span style="color:#595979; ">// will not generate a validTo field</span></b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getValidTo</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>	</b><b><span style="color:#595979; ">// redirect to endValid</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> endValid</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Transient
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setValidTo</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validTo</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b><span style="color:#406080; "></span></b><b>	</b><b><span style="color:#595979; ">// redirect to endValid</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>endValid </b><b><span style="color:#308080; ">=</span></b><b> validTo</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	
+	</b><b><span style="color:#308080; ">@</span></b><b>Transient
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getValidFrom</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b><span style="color:#406080; "></span></b><b>	</b><b><span style="color:#595979; ">// do nothing than implement Temporal</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> </b><b><span style="color: rgb(32, 0, 128);">null</span></b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Transient
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setValidFrom</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validFrom</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b><span style="color:#406080; "></span></b><b>	</b><b><span style="color:#595979; ">// do nothing </span></b><b><span style="color:#595979; ">than implement Temporal</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        And here is an example application for that entity, you find it
+        in <i>test</i>-package in class<br>
+        <ul>
+          <li><i>examples/nestedsets/temporal/JpaExample</i></li>
+        </ul>
+        Mind how the DAO is constructed. We pass <i>null</i> as <i>validFrom</i>
+        property name, as we do not support future validity, and we pass
+        <i>"endValid"</i> as the real <i>validTo</i> property name
+        (needed by the DAO for JPQL queries).<i><br>
+        </i>
+        <ul>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> EntityTransaction transaction = entityManager.getTransaction()<span style="color:#308080; ">;</span>
+		transaction.begin()<span style="color:#308080; ">;</span>
+
+		<span style="color:#200080; font-weight:bold; ">final</span> DbSession dbSession = new DbSessionJpaImpl(entityManager)<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> TemporalNestedSetsTreeDao dao = new TemporalNestedSetsTreeDao(
+				Person.class,
+				null,	<span style="color:#595979; ">// entity does not support validFrom property</span>
+				"endValid",	<span style="color:#595979; ">// entity's substitute for validTo </span><span style="color:#595979; "><span style="color:#595979; ">property</span>, needed in JPQL queries</span>
+				dbSession)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode walter = dao.createRoot(new Person("Walter"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode peter = dao.addChild(walter, new Person("Peter"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode paul = dao.addChild(walter, new Person("Paul"))<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> NestedSetsTreeNode mary = dao.addChild(walter, new Person("Mary"))<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;NestedSetsTreeNode&gt; childrenOfWalter = dao.getChildren(walter)<span style="color:#308080; ">;</span>
+		assert childrenOfWalter.size() == 3 &amp;&amp;
+			childrenOfWalter.get(0).equals(peter) &amp;&amp;
+			childrenOfWalter.get(1).equals(paul) &amp;&amp;
+			childrenOfWalter.get(2).equals(mary)<span style="color:#308080; ">;</span>
+		
+		dao.remove(peter)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;NestedSetsTreeNode&gt; newChildrenOfWalter = dao.getChildren(walter)<span style="color:#308080; ">;</span>
+		assert newChildrenOfWalter.size() == 2 &amp;&amp;
+			newChildrenOfWalter.get(0).equals(paul) &amp;&amp;
+			newChildrenOfWalter.get(1).equals(mary)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// recover node</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> Map&lt;String,Object&gt; criteria = new Hashtable&lt;String,Object&gt;()<span style="color:#308080; ">;</span>
+		criteria.put("name", "Peter")<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;NestedSetsTreeNode&gt; result = dao.findRemoved(walter, criteria)<span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> Person removedPeter = (Person) result.get(0)<span style="color:#308080; ">;</span>
+		dao.unremove(removedPeter)<span style="color:#308080; ">;</span><br><span style="color:#308080; "><br></span>		transaction.commit()<span style="color:#308080; ">;</span> <br></pre>
+        </blockquote>
+        <br>
+        <hr size="2" width="100%">
+        <h3> <a name="Closure_Table_Temporal"></a>Closure Table</h3>
+        Your path entity must implement interface <i>Temporal</i><i>TreePath</i>,
+        and you must pass the names of the <i>Temporal</i> properties
+        to the DAO constructor (typically <i>"validFrom"</i> and <i>"validTo"</i>).<br>
+        <br>
+        Here is a typical path entity (use the normal <i>Person</i> as
+        node entity like in the <a href="#Provide_the_entities">non-temporal
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          example</a>).<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">@Entity
+@IdClass(CompositePersonTreePathId.class)
+<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> PersonTreePath <span style="color:#200080; font-weight:bold; ">implements</span> <b>TemporalTreePath</b>
+<span style="color:#406080; ">{</span>
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#308080; ">@</span>JoinColumn<span style="color:#308080; ">(</span>name <span style="color:#308080; ">=</span> <span style="color:#1060b6; ">"ancestor"</span><span style="color:#308080; ">,</span> nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> ClosureTableTreeNode ancestor<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#308080; ">@</span>JoinColumn<span style="color:#308080; ">(</span>name <span style="color:#308080; ">=</span> <span style="color:#1060b6; ">"descendant"</span><span style="color:#308080; ">,</span> nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> ClosureTableTreeNode descendant<span style="color:#406080; ">;</span>
+<br>	<span style="color:#308080; ">@</span>Column<span style="color:#308080; ">(</span>nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> depth<span style="color:#406080; ">;</span>
+
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> orderIndex<span style="color:#406080; ">;</span>
+
+<b><span style="color:#308080; ">	@</span></b><b>Temporal</b><b><span style="color:#308080; ">(</span></b><b>TemporalType</b><b><span style="color:#308080; ">.</span></b><b>TIMESTAMP</b><b><span style="color:#308080; ">)</span></b><b>
+	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validFrom</b><b><span style="color:#406080; ">;</span></b><b>
+    
+</b><b>	</b><b><span style="color:#308080; ">@</span></b><b>Temporal</b><b><span style="color:#308080; ">(</span></b><b>TemporalType</b><b><span style="color:#308080; ">.</span></b><b>TIMESTAMP</b><b><span style="color:#308080; ">)</span></b><b>
+	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validTo</b><b><span style="color:#406080; ">;</span></b><b>
+</b>	
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setAncestor<span style="color:#308080; ">(</span>ClosureTableTreeNode ancestor<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>ancestor <span style="color:#308080; ">=</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDescendant<span style="color:#308080; ">(</span>ClosureTableTreeNode descendant<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>descendant <span style="color:#308080; ">=</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+<br>	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getDepth<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> depth<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDepth<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> depth<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>depth <span style="color:#308080; ">=</span> depth<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getOrderIndex<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> orderIndex<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setOrderIndex<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> position<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>orderIndex <span style="color:#308080; ">=</span> position<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+<span style="color:#406080; "></span>
+<b>	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getValidTo</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> validTo</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setValidTo</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validTo</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>validTo </b><b><span style="color:#308080; ">=</span></b><b> validTo</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b><br></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getValidFrom</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> validFrom</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setValidFrom</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validFrom</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>validFrom </b><b><span style="color:#308080; ">=</span></b><b> validFrom</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        Following example DAO application you find in <i>test</i>-package
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        in class<br>
+        <ul>
+          <li><i>examples/closuretable/temporal/JpaExample</i></li>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> EntityTransaction transaction = entityManager.getTransaction()<span style="color:#308080; ">;</span>
+		transaction.begin()<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> DbSession dbSession = new DbSessionJpaImpl(entityManager)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> TemporalClosureTableTreeDao dao = new TemporalClosureTableTreeDao(
+				Person.class,
+				PersonTreePath.class,
+				true,
+				Temporal.VALID_FROM,
+				Temporal.VALID_TO,
+				dbSession)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode walter = dao.createRoot(new Person("Walter"))<span style="color:#308080; ">;</span>
+		dao.remove(walter)<span style="color:#308080; ">;</span>
+		
+		assert dao.getRoots().size() == 0<span style="color:#308080; ">;</span>
+		assert dao.getAllRoots().size() == 1<span style="color:#308080; ">;</span>	<span style="color:#595979; ">// it is still there!<br></span><span style="color:#308080; "></span><br>		dao.unremove(walter)<span style="color:#308080; ">;<br></span>		assert dao.getRoots().size() == 1<span style="color:#308080; ">;</span><br><br>		transaction.commit()<span style="color:#308080; ">;</span> <br></pre>
+        </blockquote>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="DAO_classes"></a>DAO API</h2>
+        Here is an outline of the DAO API. Please refer to <i>JavaDoc</i>
+        for detailed semantics.<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;"><span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">interface</span> TreeDao &lt;N <span style="color:#200080; font-weight:bold; ">extends</span> TreeNode&gt; 
+<span style="color:#406080; ">{</span>
+	N createRoot<span style="color:#308080; ">(</span>N root<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getRoots<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	N addChild<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">,</span> N child<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	N addChildAt<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">,</span> N child<span style="color:#308080; ">,</span> <span style="color:#7779bb; ">int</span> position<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	N addChildBefore<span style="color:#308080; ">(</span>N sibling<span style="color:#308080; ">,</span> N child<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+
+	<span style="color:#7779bb; ">void</span> update<span style="color:#308080; ">(</span>N entity<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+
+	<span style="color:#7779bb; ">void</span> remove<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> removeAll<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+
+	N find<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">Serializable</span> id<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> find<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">,</span> Map<span style="color:#308080; ">&lt;</span><span style="color:#6679aa; font-weight:bold; ">String</span><span style="color:#308080; ">,</span><span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">&gt;</span> criteria<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	<span style="color:#7779bb; ">int</span> size<span style="color:#308080; ">(</span>N tree<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	N getRoot<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	N getParent<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getPath<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getChildren<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">int</span> getChildCount<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">boolean</span> isEqualToOrChildOf<span style="color:#308080; ">(</span>N child<span style="color:#308080; ">,</span> N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">boolean</span> isChildOf<span style="color:#308080; ">(</span>N child<span style="color:#308080; ">,</span> N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">boolean</span> isRoot<span style="color:#308080; ">(</span>N entity<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">boolean</span> isLeaf<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">int</span> getLevel<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getTreeCacheable<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> findSubTree<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> treeCacheable<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> findDirectChildren<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> treeCacheable<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getTree<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	<span style="color:#7779bb; ">void</span> move<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">,</span> N newParent<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> moveTo<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">,</span> N parent<span style="color:#308080; ">,</span> <span style="color:#7779bb; ">int</span> position<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> moveBefore<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">,</span> N sibling<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> moveToBeRoot<span style="color:#308080; ">(</span>N child<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	
+	N copy<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">,</span> N parent<span style="color:#308080; ">,</span> N copiedNodeTemplate<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	N copyTo<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">,</span> N parent<span style="color:#308080; ">,</span> <span style="color:#7779bb; ">int</span> position<span style="color:#308080; ">,</span> N copiedNodeTemplate<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	N copyBefore<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">,</span> N sibling<span style="color:#308080; ">,</span> N copiedNodeTemplate<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+	N copyToBeRoot<span style="color:#308080; ">(</span>N child<span style="color:#308080; ">,</span> N copiedNodeTemplate<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+
+	<span style="color:#7779bb; ">void</span> setUniqueTreeConstraint<span style="color:#308080; ">(</span>UniqueTreeConstraint<span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> uniqueTreeConstraint<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> setCheckUniqueConstraintOnUpdate<span style="color:#308080; ">(</span><span style="color:#7779bb; ">boolean</span> checkUniqueConstraintOnUpdate<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> checkUniqueConstraint<span style="color:#308080; ">(</span>N cloneOfExistingNodeWithNewValues<span style="color:#308080; ">,</span> N root<span style="color:#308080; ">,</span> N originalNode<span style="color:#308080; ">)</span> <span style="color:#200080; font-weight:bold; ">throws</span> UniqueConstraintViolationException<span style="color:#406080; ">;</span>
+
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">interface</span> CopiedNodeRenamer <span style="color:#308080; ">&lt;</span>N <span style="color:#200080; font-weight:bold; ">extends</span> TreeNode<span style="color:#308080; ">&gt;</span>
+	<span style="color:#406080; ">{</span>
+		<span style="color:#7779bb; ">void</span> renameCopiedNode<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	
+	<span style="color:#7779bb; ">void</span> setCopiedNodeRenamer<span style="color:#308080; ">(</span>CopiedNodeRenamer<span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> copiedNodeRenamer<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        Remarks:<br>
+        <ul>
+          <li>For all <i>copy, move</i> and <i>addChild</i> method
+            calls it is important to use the returned entity after the
+            operation, not the one passed as argument. The reason is the
+            implementation of <i>save()</i>, which performs a JPA <i>merge()</i>,
+            and this might return another instance than the one passed
+            in.</li>
+          <li> You need a special method to copy or move a sub-tree to
+            root level: <i>copyToBeRoot(), moveToBeRoot()</i>.<br>
+          </li>
+          <li>The <i>update()</i> method might be not so useful, see <a
+              href="#The_Update_Problem">"Update Problem"</a>, as well
+            as the <i>getTree()</i> method, because you can not extract
+            children lists from its result.</li>
+        </ul>
+        The temporal<span style="font-style: italic;"></span> extension
+        adds following methods:<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;"><span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">interface</span> TemporalTreeDao &lt;N <span style="color:#200080; font-weight:bold; ">extends</span> TreeNode&gt; <span style="color:#200080; font-weight:bold; ">extends</span> TreeDao&lt;N&gt;
+<span style="color:#406080; ">{</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> findRemoved<span style="color:#308080; ">(</span><span style="color:#308080; "></span>N parent, Map<span style="color:#308080; ">&lt;</span><span style="color:#6679aa; font-weight:bold; ">String</span><span style="color:#308080; ">,</span><span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">&gt;</span> criteria<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span><br><br>	<span style="color:#7779bb; ">void</span> unremove<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getAllRoots<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> getFullTreeCacheable<span style="color:#308080; ">(</span>N parent<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> findValidDirectChildren<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span>N<span style="color:#308080; ">&gt;</span> treeCacheable<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	
+	<span style="color:#7779bb; ">void</span> removePhysically<span style="color:#308080; ">(</span>N node<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> removeHistoricizedTreesPhysically<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+	<span style="color:#7779bb; ">void</span> removeAllPhysically<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        You can apply the non-temporal method <i>findDirectChildren()</i>
+        on a <i>getFullTreeCacheable()</i> result to find both removed
+        and valid children, and with the result of <i>findValidDirectChildren()</i>
+        you can generate a difference list that will contain just the
+        removed children.<br>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="Synchronization"></a>Concurrency</h2>
+        A <i>JpaTreeDao</i> instance is thread-safe, but does no
+        transaction management and no table locking. In a multi-threaded
+        and multi-process environment thread-safety is not enough. The
+        caller of any DAO write method is expected to ensure that no
+        other thread or process accesses the targeted table(s) until the
+        write has terminated. In other words, you have to grant
+        atomicity, consistency and isolation. <i>JpaTreeDao</i> does
+        not do that.<br>
+        <br>
+        For instance, when adding a child node into a Nested Sets Tree,
+        the DAO performs several database statements:<br>
+        <ul>
+          <li>it reads all nodes of the affected sub-tree</li>
+          <li>it calculates new left/right indexes for them</li>
+          <li>it inserts the new node and updates the sub-tree with new
+            left/right indexes</li>
+        </ul>
+        Imagine one application reads nodes before another application
+        can write its pending new indexes for those nodes. The first
+        application would write wrong indexes then. You could end up
+        with inconsistent or destroyed trees. So every DAO needs
+        exclusive access to the table it writes. You could achieve this
+        by a table lock, or a SERIALIZABLE transaction (not allowing
+        read- or write-access until it has terminated).<br>
+        <br>
+        Mind further that when you cache sub-trees (<i>getTreeCacheable()</i>),
+
+
+
+
+
+
+
+        you need to release the cache as soon as the tree was modified.<br>
+        <br>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="Unique_constraints"></a>Unique Constraints</h2>
+        There are problems with hierarchies and unique constraints. When
+        you define constraints on database level, all nodes of all trees
+        in the table would be affected by them. But you might want
+        uniqueness only per tree root, moreover you might want it only
+        per tree level (unique children lists). Database level
+        constraints can not cover that. Thus we need programmed
+        constraints.<br>
+        <br>
+        Basically you can write your own constraints by implementing the
+        interface <span style="font-style: italic;">UniqueTreeConstraint.</span>
+        You can install this by calling<br>
+        <ul>
+          <li><i>dao.setUniqueTreeConstraint(constraint)</i></li>
+        </ul>
+        That constraint will be called<i> </i>on any <i>addChild(), </i><i>copy*()</i>
+        and <i>move*().</i> It will <b>not</b> be called on <i>update()</i>,
+        unless you configure <i>dao.setCheckUniqueConstraintOnUpdate(true)</i>.
+        See <a href="#The_Update_Problem">"Update Problem"</a> chapter.<i><br>
+          <br>
+          <br>
+          JpaTreeDao</i> comes with following <span style="font-style:
+          italic;">UniqueTreeConstraint</span> implementations:<br>
+        <ul>
+          <li><i>UniqueWholeTreeConstraintImpl</i> checks that given
+            properties are unique in the whole tree below a certain root<br>
+          </li>
+          <li><i>UniqueChildrenConstraintImpl</i> checks that given
+            properties are unique in every children list of every parent
+            below a certain root</li>
+          <li>plus the temporal variants of both: <i>UniqueWholeTreeTemporalConstraintImpl,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            </i><i>UniqueChildrenTemporalConstraintImpl</i></li>
+        </ul>
+        Mind that the DAO does not use any constraint by default, you
+        must configure it explicitly.<br>
+        All of them accept a <code>String[][]</code> array in
+        constructor, containing the names of properties to be unique.
+        Combined property-sets are in inner arrays. For example, to
+        check properties<br>
+        <ol>
+          <li><i>"name"</i> combined with <i>"code"</i>, and</li>
+          <li><i>"acronym"</i></li>
+        </ol>
+        for uniqueness, you must do the following:<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		dao.setUniqueTreeConstraint(new UniqueWholeTreeConstraintImpl(
+						new String [][] <span style="color:#406080; ">{</span> <span style="color:#406080; ">{</span> <span style="color:#1060b6; ">"name"</span><span style="color:#308080; ">,</span><span style="color:#1060b6; ">"code"</span> <span style="color:#406080; ">}</span><span style="color:#308080; ">,</span> <span style="color:#406080; ">{</span> <span style="color:#1060b6; ">"acronym"</span> <span style="color:#406080; ">}</span> <span style="color:#406080; ">}</span>,
+						false))<span style="color:#308080; ">;</span>
+</pre>
+        </blockquote>
+        As a result every combination of <i>name</i> and <i>code</i>
+        property values will be unique per tree root, and so will <i>acronym</i>
+        values.<br>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="The_Update_Problem"></a>The Update Problem</h2>
+        When you change a unique property of an entity which is already
+        in <i>persistent</i> state, the JPA layer notices it and
+        prepares an SQL update statement. When you start a constraint
+        check (query) after that modification, the JPA layer will flush
+        its pending changes. When the constraint check now finds a
+        violation, it would throw an exception. When you somehow commit
+        the transaction after that exception, the invalid value will be
+        stored, by-passing the constraint, because it already has been
+        flushed. Even when you rollback the transaction, the invalid
+        value stays in the entity and might be stored later in another
+        transaction which re-attaches the entity.<br>
+        <br>
+        So what to do against such pitfalls?<br>
+        <ol>
+          <li>never commit a transaction that received a <i>UniqueConstraintViolationException</i><i><br>
+            </i></li>
+          <li>restore the old value(s) in the entity that caused the
+            exception<small> (but do not do that by a <i>refresh()</i>,
+              as this would refresh from the already flushed invalid
+              entity; <i>evict()</i> does not help either),</small> or
+            do not use that entity anymore.<br>
+          </li>
+        </ol>
+        It might be difficult to restore the old value (recorded it
+        before the update?), as well as it might be difficult to use the
+        entity no more (is it in some cache?). When you are sure that
+        your transaction and cache management can handle <i>UniqueConstraintViolationException</i>
+        adequately and somehow get rid of the entity with the invalid
+        value, then do a <i>dao.setCheckUniqueConstraintOnUpdate(true)</i>,
+        which will cause the DAO to check unique constraints on any <i>update()</i>
+        call. Default is <i>false</i>.<br>
+        <br>
+        Here is a safe way to update a constrained property:<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		dao.setCheckUniqueConstraintOnUpdate(true)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> String oldName = peter.getName()<span style="color:#308080; ">;</span>
+		try	<span style="color:#406080; ">{</span>
+			peter<span style="color:#308080; ">.</span>setName<span style="color:#308080; ">(</span><span style="color:#1060b6; ">"Pietro"</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			dao<span style="color:#308080; ">.</span>update<span style="color:#308080; ">(</span>peter<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>	<span style="color:#595979; ">// throws exception when not unique</span> <span style="color:#595979; ">and</span> <span style="color:#595979; ">dao.checkUniqueConstraintOnUpdate == true</span>
+		<span style="color:#406080; ">}</span>
+		catch (UniqueConstraintViolationException e)	<span style="color:#406080; ">{</span>
+			peter<span style="color:#308080; ">.</span>setName<span style="color:#308080; ">(</span>oldName<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			throw e<span style="color:#308080; "></span><span style="color:#406080; ">;</span>
+		<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        Alternatively you can explicitly check the constraint before
+        calling the setter of a unique property (the "do not let it
+        happen" strategy). This goes with <i>dao.checkUniqueConstraintOnUpdate
+
+
+
+
+
+
+
+
+
+
+
+
+
+          == false </i>(default)<i>.</i>
+        <ul>
+          <li><i>clone()</i> the existing node to be updated (every <i>TreeNode</i>
+            is <i>Cloneable</i>) to achieve a detached template node<br>
+          </li>
+          <li>set the new value(s) to the clone</li>
+          <li>call <i>dao.checkUniqueConstraint(clone, root,
+              existingNode)</i></li>
+          <li>in case this throws <i>UniqueConstraintViolationException</i>,
+            report this to the user</li>
+          <li>else set the new value to the existing node and call <i>dao.update(existingNode)</i>,
+            or simply commit the transaction.</li>
+        </ul>
+        <ul>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> String petersNewName = <span style="color:#1060b6; ">"Pietro"</span><span style="color:#308080; ">;</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> Person peterClone = (Person) peter.clone()<span style="color:#308080; ">;</span>	<span style="color:#595979; ">// clone has null primary key</span>
+		peterClone.setName(petersNewName)<span style="color:#308080; ">;</span>
+		dao.checkUniqueConstraint(	<span style="color:#595979; ">// would throw exception when not unique</span>
+				peterClone,	<span style="color:#595979; ">// the rename candidate</span>
+				walter,	<span style="color:#595979; ">// the root node</span>
+				peter)<span style="color:#308080; ">;</span>	<span style="color:#595979; ">// the existing node<br><br></span>		peter.setName(petersNewName)<span style="color:#308080; ">;</span>	<span style="color:#595979; ">// no exception was thrown</span>
+		dao.update(peter)<span style="color:#308080; ">;</span>	<span style="color:#595979; ">// will not check again when dao.checkUniqueConstraintOnUpdate == false (is default)</span>
+</pre>
+        </blockquote>
+        <br>
+        <br>
+        <hr size="2" width="100%">
+        <h2><a name="Caching_Children"></a>Caching Trees</h2>
+        The advantage of using <i>JpaTreeDao</i> is that you can read a
+        whole tree with just one query. The disadvantage is that reading
+        children lists is quite slow, at least for <i>Nested Sets</i>.<br>
+        <br>
+        <i>JpaTreeDao</i> supports gaining performance by providing
+        following methods:<br>
+        <ul>
+          <li><i>getTreeCacheable(parent)</i></li>
+          <li><i>findDirectChildren(treeCacheable)</i></li>
+          <li><i>findSubTree(topNode, treeCachable)<br>
+            </i></li>
+        </ul>
+        The first reads a whole tree (or sub-tree) as a List, the second
+        can extract children lists or sub-trees from that List without
+        accessing the database at all (and thus is very fast). So when
+        you cache the result of <i>getTreeCacheable</i>, you can apply
+        <i>findDirectChildren</i> or <i>findSubTree </i>on that result
+        to read very quickly:<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;N&gt; waltersTree = dao.getTreeCacheable(walter)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;N&gt; marysSubTree = dao.findSubTree(mary, waltersTree)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;N&gt; waltersChildren = dao.findDirectChildren(waltersTree)<span style="color:#308080; ">;</span><br>		<span style="color:#200080; font-weight:bold; ">final</span> List&lt;N&gt; marysChildren = dao.findDirectChildren(marysSubTree)<span style="color:#308080; ">;</span><br></pre>
+        </blockquote>
+        <i>JpaTreeDao</i> does not cache anything by itself, it is up to
+        you to put the cacheable results into some cache implementation.<br>
+        <br>
+        <hr size="2" width="100%">
+        <h2> <a name="Another_Temporal_Remove"></a>Another Recoverable
+          Remove Method<br>
+        </h2>
+        This is about the temporal DAOs. Following example shows how
+        historization is redirected to a simple <i>boolean </i><i>deleted</i>
+        flag, without any <i>Date</i> fields. The sample is built upon
+        <i>TemporalClosureTableTreeDao</i>, but it would be the same for
+        <i>TemporalNestedSetsTreeDao</i>, except that you must use the
+        node entity for redirection, not the path entity.<br>
+        <br>
+        You find this example code in<br>
+        <ul>
+          <li><i>examples/closuretable/temporal/deletedflag/JpaExample</i></li>
+        </ul>
+        The node entity is the same as in the <a
+          href="#Provide_the_entities">non-temporal example</a>.&nbsp; <br>
+        Here is the path entity with its <i>deleted</i> flag:<br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">@Entity
+@IdClass(CompositePersonTreePathId.class)<span style="color:#595979; "></span>
+<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#200080; font-weight:bold; ">class</span> PersonTreePath <span style="color:#200080; font-weight:bold; ">implements</span> TemporalTreePath
+<span style="color:#406080; ">{</span>
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#308080; ">@</span>JoinColumn<span style="color:#308080; ">(</span>name <span style="color:#308080; ">=</span> <span style="color:#1060b6; ">"ancestor"</span><span style="color:#308080; ">,</span> nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span><span style="color:#595979; "></span>
+	<span style="color:#200080; font-weight:bold; ">private</span> ClosureTableTreeNode ancestor<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Id
+	<span style="color:#308080; ">@</span>ManyToOne<span style="color:#308080; ">(</span>targetEntity <span style="color:#308080; ">=</span> Person<span style="color:#308080; ">.</span>class<span style="color:#308080; ">)</span>
+	<span style="color:#308080; ">@</span>JoinColumn<span style="color:#308080; ">(</span>name <span style="color:#308080; ">=</span> <span style="color:#1060b6; ">"descendant"</span><span style="color:#308080; ">,</span> nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span><span style="color:#595979; "></span>
+	<span style="color:#200080; font-weight:bold; ">private</span> ClosureTableTreeNode descendant<span style="color:#406080; ">;</span>
+
+	<span style="color:#308080; ">@</span>Column<span style="color:#308080; ">(</span>nullable <span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span>
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> depth<span style="color:#406080; ">;</span>
+
+	<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">int</span> orderIndex<span style="color:#406080; ">;</span>
+
+<b>	</b><b><span style="color: rgb(32, 0, 128);">private</span></b><b> </b><b><span style="color:#7779bb; ">boolean</span></b><b> deleted</b><b><span style="color:#406080; ">;</span></b>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode getAncestor<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setAncestor<span style="color:#308080; ">(</span>ClosureTableTreeNode ancestor<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>ancestor <span style="color:#308080; ">=</span> ancestor<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> ClosureTableTreeNode getDescendant<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDescendant<span style="color:#308080; ">(</span>ClosureTableTreeNode descendant<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>descendant <span style="color:#308080; ">=</span> descendant<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getDepth<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> depth<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setDepth<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> depth<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>depth <span style="color:#308080; ">=</span> depth<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">int</span> getOrderIndex<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">return</span> orderIndex<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span>
+	<span style="color:#308080; ">@</span>Override
+	<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> setOrderIndex<span style="color:#308080; ">(</span><span style="color:#7779bb; ">int</span> position<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+		<span style="color:#200080; font-weight:bold; ">this</span><span style="color:#308080; ">.</span>orderIndex <span style="color:#308080; ">=</span> position<span style="color:#406080; ">;</span>
+	<span style="color:#406080; ">}</span><br><br>&nbsp;<span style="color:#406080; "></span>	<span style="color:#595979; ">// dummy implementation of interface Temporal</span>
+	
+<b>	</b><b><span style="color:#308080; ">@</span></b><b>Transient</b><b><b>	</b><b><span style="color:#595979; ">// will not generate a validTo field</span></b>
+</b><b>	</b><b><span style="color:#308080; ">@</span></b><b>Override</b>
+<b>	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getValidTo</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> </b><b><span style="color: rgb(32, 0, 128);">null</span></b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<b>	</b><b><span style="color:#308080; ">@</span></b><b>Transient</b><b><b>	</b><b><span style="color:#595979; ">// will not generate a validTo field</span></b>
+</b><b>	</b><b><span style="color:#308080; ">@</span></b><b>Override</b>
+<b>	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setValidTo</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validTo</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<b>	</b><b><span style="color:#308080; ">@</span></b><b>Transient</b><b><b>	</b><b><span style="color:#595979; ">// will not generate a validTo field</span></b>
+</b><b>	</b><b><span style="color:#308080; ">@</span></b><b>Override</b>
+<b>	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> getValidFrom</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> </b><b><span style="color: rgb(32, 0, 128);">null</span></b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<b>	</b><b><span style="color:#308080; ">@</span></b><b>Transient</b><b><b>	</b><b><span style="color:#595979; ">// will not generate a validTo field</span></b>
+</b><b>	</b><b><span style="color:#308080; ">@</span></b><b>Override
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setValidFrom</b><b><span style="color:#308080; ">(</span></b><b><span style="color: rgb(102, 121, 170);">Date</span></b><b> validFrom</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+	
+	<span style="color:#595979; ">// the really used remove-implementation</span>
+	
+<b>	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">boolean</span></b><b> isDeleted</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">return</span></b><b> deleted</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b><b>
+	</b><b><span style="color: rgb(32, 0, 128);">public</span></b><b> </b><b><span style="color:#7779bb; ">void</span></b><b> setDeleted</b><b><span style="color:#308080; ">(</span></b><b><span style="color:#7779bb; ">boolean</span></b><b> deleted</b><b><span style="color:#308080; ">)</span></b><b> </b><b><span style="color:#406080; ">{</span></b><b>
+		</b><b><span style="color: rgb(32, 0, 128);">this</span></b><b><span style="color:#308080; ">.</span></b><b>deleted </b><b><span style="color:#308080; ">=</span></b><b> deleted</b><b><span style="color:#406080; ">;</span></b><b>
+	</b><b><span style="color:#406080; ">}</span></b>
+<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        And here the related example application, you can find this in<br>
+        <ul>
+          <li><i>examples/closuretable/temporal/deletedflag/JpaExample</i></li>
+        </ul>
+        Mind how we pass <i>null</i> for both <i>validFrom</i> and <i>validTo</i>
+        property names to the DAO constructor, to it make it ignore both
+        fields<i>.</i> The override will adjust the queries and removals
+        to<i> </i>do what they are expected.<i><br>
+        </i>
+        <ul>
+        </ul>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> EntityTransaction transaction = entityManager.getTransaction()<span style="color:#308080; ">;</span>
+		transaction.begin()<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> DbSession dbSession = new DbSessionJpaImpl(entityManager)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> TemporalClosureTableTreeDao dao = new TemporalClosureTableTreeDao(Person.class, PersonTreePath.class, true, null, null, dbSession)
+		<span style="color:#406080; ">{</span>
+			<span style="color:#308080; ">@</span>Override
+			<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">boolean</span> isValid<span style="color:#308080; ">(</span>Temporal node<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">Date</span> validityDate<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				<span style="color:#200080; font-weight:bold; ">return</span> <span style="color:#308080; ">(</span><span style="color:#308080; ">(</span>PersonDeletedFlagTreePath<span style="color:#308080; ">)</span> node<span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>isDeleted<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span> <span style="color:#308080; ">=</span><span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+			
+			<span style="color:#308080; ">@</span>Override
+			<span style="color:#200080; font-weight:bold; ">protected</span> <span style="color:#7779bb; ">void</span> assignInvalidity<span style="color:#308080; ">(</span>TreePath path<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				<span style="color:#308080; ">(</span><span style="color:#308080; ">(</span>PersonDeletedFlagTreePath<span style="color:#308080; ">)</span> path<span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>setDeleted<span style="color:#308080; ">(</span><span style="color:#200080; font-weight:bold; ">true</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+			<span style="color:#308080; ">@</span>Override
+			<span style="color:#200080; font-weight:bold; ">protected</span> <span style="color:#7779bb; ">void</span> assignValidity<span style="color:#308080; ">(</span>TreePath path<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				<span style="color:#308080; ">(</span><span style="color:#308080; ">(</span>PersonDeletedFlagTreePath<span style="color:#308080; ">)</span> path<span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>setDeleted<span style="color:#308080; ">(</span><span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+			
+			<span style="color:#308080; ">@</span>Override
+			<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> appendValidityCondition<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> tableAlias<span style="color:#308080; ">,</span> StringBuilder queryText<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span><span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">&gt;</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				appendCondition<span style="color:#308080; ">(</span><span style="color:#200080; font-weight:bold; ">true</span><span style="color:#308080; ">,</span> tableAlias<span style="color:#308080; ">,</span> queryText<span style="color:#308080; ">,</span> parameters<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+			<span style="color:#308080; ">@</span>Override
+			<span style="color:#200080; font-weight:bold; ">protected</span> <span style="color:#7779bb; ">void</span> appendInvalidityCondition<span style="color:#308080; ">(</span><span style="color:#6679aa; font-weight:bold; ">String</span> tableAlias<span style="color:#308080; ">,</span> StringBuilder queryText<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span><span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">&gt;</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				appendCondition<span style="color:#308080; ">(</span><span style="color:#200080; font-weight:bold; ">false</span><span style="color:#308080; ">,</span> tableAlias<span style="color:#308080; ">,</span> queryText<span style="color:#308080; ">,</span> parameters<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+			
+			<span style="color:#200080; font-weight:bold; ">private</span> <span style="color:#7779bb; ">void</span> appendCondition<span style="color:#308080; ">(</span><span style="color:#7779bb; ">boolean</span> validity<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">String</span> tableAlias<span style="color:#308080; ">,</span> StringBuilder queryText<span style="color:#308080; ">,</span> <span style="color:#6679aa; font-weight:bold; ">List</span><span style="color:#308080; ">&lt;</span><span style="color:#6679aa; font-weight:bold; ">Object</span><span style="color:#308080; ">&gt;</span> parameters<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				queryText<span style="color:#308080; ">.</span>append<span style="color:#308080; ">(</span>buildAliasedPropertyName<span style="color:#308080; ">(</span>tableAlias<span style="color:#308080; ">,</span> <span style="color:#1060b6; ">"deleted"</span><span style="color:#308080; ">)</span><span style="color:#308080; ">+</span><span style="color:#1060b6; ">" = "</span><span style="color:#308080; ">+</span>buildIndexedPlaceHolder<span style="color:#308080; ">(</span>parameters<span style="color:#308080; ">)</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+				parameters<span style="color:#308080; ">.</span>add<span style="color:#308080; ">(</span>validity <span style="color:#308080; ">?</span> Boolean<span style="color:#308080; ">.</span>FALSE <span style="color:#308080; ">:</span> Boolean<span style="color:#308080; ">.</span>TRUE<span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+		<span style="color:#406080; ">}</span><span style="color:#308080; ">;</span>
+		
+		<span style="color:#200080; font-weight:bold; ">final</span> ClosureTableTreeNode walter = dao.createRoot(new Person("Walter"))<span style="color:#308080; ">;</span>
+		dao.remove(walter)<span style="color:#308080; ">;</span>
+		
+		assert dao.getRoots().size() == 0<span style="color:#308080; ">;</span>
+		assert dao.getAllRoots().size() == 1<span style="color:#308080; ">;</span>
+		
+		transaction.commit()<span style="color:#308080; ">;</span>
+</pre>
+        </blockquote>
+        <br>
+        <hr style="width: 100%; height: 2px;"><br>
+        <h2> <a name="Copying_Nodes"></a>Copying Nodes</h2>
+        When copying nodes, you might want to do some changes to the
+        copied nodes before they are stored to persistence. This is
+        particularily useful when copying a node and pasting it into the
+        same parent, but a unique constraint would then complain about
+        duplicate names.<br>
+        <br>
+        There are two ways to do this:<br>
+        <ul>
+          <li><i>copiedNodeTemplate</i> parameter</li>
+          <li><i>TreeDao.CopiedNodeRenamer</i> interface</li>
+        </ul>
+        <br>
+        <ul>
+        </ul>
+        <h3><a name="CopiedNodeTemplate_parameter"></a>CopiedNodeTemplate
+
+
+
+
+
+
+
+
+
+
+          parameter</h3>
+        This is an optional parameter (can be null) for all <i>copy*()</i>
+        methods. When not null, this node would be used as the top-level
+        node of the copied tree. <b>None</b> of the copied sub-nodes
+        would be affected by that template. Such would be useful for
+        trees with <i>UniqueChildrenConstraint</i> on pasting a copied
+        tree into its own parent, because then the copied sub-nodes will
+        not violate the constraint, but the top-level node will.<br>
+        <br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		<span style="color:#200080; font-weight:bold; ">final</span> Person copiedMaryTemplate = (Person) mary.clone()<span style="color:#308080; ">;</span>
+		copiedMaryTemplate.setName("Copy of "+mary.getName())<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// walter is root, mary is child, with peter and paul as children</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> Person copiedMary = <b>dao.copy(mary, walter, copiedMaryTemplate)</b><span style="color:#308080; ">;</span>
+		assert copiedMary.getName().equals("Copy of Mary")<span style="color:#308080; ">;</span>
+		
+		List&lt;Person&gt; copiedMarysChildren = dao.getChildren(copiedMary)<span style="color:#308080; ">;</span>
+		for (Person person : copiedMarysChildren)	<span style="color:#406080; ">{</span>
+			assert person<span style="color:#308080; ">.</span>getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>startsWith<span style="color:#308080; ">(</span><span style="color:#1060b6; ">"Copy of "</span><span style="color:#308080; ">)</span> <span style="color:#308080; ">=</span><span style="color:#308080; ">=</span> <span style="color:#200080; font-weight:bold; ">false</span><span style="color:#406080; ">;</span>
+		<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        <h3><a name="CopiedNodeRenamer_interface"></a>CopiedNodeRenamer
+          interface</h3>
+        This is a more sophisticated solution that provides an interface
+        you can implement and then install into the DAO. Once installed,
+        the <i>CopiedNodeRenamer</i> would receive any copied node <b>after</b>
+        it has been copied and <b>before</b> it gets stored to
+        persistence. The implementation is expected to do edits on the
+        node which avoid constraint violations. e.g. by <i>person.setName("Copy
+
+
+
+
+
+
+
+
+
+
+
+
+          of "+person.getName())</i>. By means of <i>CopiedNodeRenamer</i>
+        you can edit all nodes of a copied tree, useful when having <i>UniqueWholeTreeConstraint</i>.<br>
+        <br>
+        <blockquote>
+          <pre style="color:#000020;background:#f6f8ff;">		dao.setCopiedNodeRenamer(new TreeDao.CopiedNodeRenamer&lt;Person&gt;() <span style="color:#406080; ">{</span>
+			<span style="color:#308080; ">@</span>Override
+			<span style="color:#200080; font-weight:bold; ">public</span> <span style="color:#7779bb; ">void</span> renameCopiedNode<span style="color:#308080; ">(</span>Person person<span style="color:#308080; ">)</span> <span style="color:#406080; ">{</span>
+				person<span style="color:#308080; ">.</span>setName<span style="color:#308080; ">(</span><span style="color:#1060b6; ">"Copy of "</span><span style="color:#308080; ">+</span>person<span style="color:#308080; ">.</span>getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+			<span style="color:#406080; ">}</span>
+		<span style="color:#406080; ">}</span>)<span style="color:#308080; ">;</span>
+		
+		<span style="color:#595979; ">// walter is root, mary is child, with peter and paul as children</span>
+		<span style="color:#200080; font-weight:bold; ">final</span> Person copiedMary = <b>dao.copy(mary, walter, null)</b><span style="color:#308080; ">;</span>
+		assert copiedMary.getName().equals(<span style="color:#1060b6; ">"Copy of Mary"</span>)<span style="color:#308080; ">;</span>
+		
+		List&lt;Person&gt; waltersTree = dao.getTree(walter)<span style="color:#308080; ">;</span>
+		assert waltersTree.contains(copiedMary)<span style="color:#308080; ">;<br></span>
+		for (Person person : waltersTree)	<span style="color:#406080; ">{</span>
+			assert person<span style="color:#308080; ">.</span>getName<span style="color:#308080; ">(</span><span style="color:#308080; ">)</span><span style="color:#308080; ">.</span>startsWith<span style="color:#308080; ">(</span><span style="color:#1060b6; ">"Copy of "</span><span style="color:#308080; ">)</span><span style="color:#406080; ">;</span>
+		<span style="color:#406080; ">}</span>
+</pre>
+        </blockquote>
+        <br>
+        <hr style="width: 100%; height: 2px;">
+        <h2><a name="List_of_examples"></a>List of examples</h2>
+        <p>You find all available examples in<br>
+        </p>
+        <ul>
+          <li><i>src/test/java/fri/util/database/jpa/tree/examples</i></li>
+        </ul>
+        <p>directory, their names are <i>JpaExample</i> or <i>HibernateSessionExample</i>.
+          Most example entities are in the same directory as the example
+          that uses them. Their names differ from the names used in this
+          documentation, because all entity names must be unique when
+          using auto-scanning for annotated classes, so there are <i>PersonNst,
+
+
+
+
+
+
+
+
+
+
+            PersonCtt, PersonTctt</i> and so on.</p>
+        <div align="center"><img alt="example directory"
+            src="examples.jpg" height="406" width="459"><br>
+        </div>
+        <br>
+        <hr size="2" width="100%"> </div>
+    </div>
+  </body>
+</html>
